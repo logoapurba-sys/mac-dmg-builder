@@ -1,0 +1,47 @@
+name: Build macOS DMG
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download Apple Silicon Build
+        run: |
+          curl -L -o arm64.zip "https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-arm64-Apple-Silicon.zip"
+
+      - name: Download Intel Build
+        run: |
+          curl -L -o x64.zip "https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-x64-Intel-Mac.zip"
+
+      - name: Prepare Apple Silicon DMG
+        run: |
+          unzip arm64.zip
+          mkdir dmg-arm64
+          mv *.app dmg-arm64/
+          ln -s /Applications dmg-arm64/Applications
+
+          hdiutil create -volname "Gotlancer (Apple Silicon)" \
+          -srcfolder dmg-arm64 \
+          -ov -format UDZO Gotlancer-AppleSilicon.dmg
+
+      - name: Prepare Intel DMG
+        run: |
+          unzip x64.zip
+          mkdir dmg-x64
+          mv *.app dmg-x64/
+          ln -s /Applications dmg-x64/Applications
+
+          hdiutil create -volname "Gotlancer (Intel)" \
+          -srcfolder dmg-x64 \
+          -ov -format UDZO Gotlancer-Intel.dmg
+
+      - name: Upload DMGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: gotlancer-dmgs
+          path: |
+            Gotlancer-AppleSilicon.dmg
+            Gotlancer-Intel.dmg
