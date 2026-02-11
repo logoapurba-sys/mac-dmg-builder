@@ -1,7 +1,67 @@
-- name: Download Apple Silicon Build
-  run: |
-    wget -O arm64.zip https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-arm64.zip
+name: Build macOS DMG
 
-- name: Download Intel Build
-  run: |
-    wget -O x64.zip https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-x64.zip
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Download Apple Silicon Build
+        run: |
+          wget -O arm64.zip https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-arm64.zip
+
+      - name: Download Intel Build
+        run: |
+          wget -O x64.zip https://github.com/logoapurba-sys/mac-dmg-builder/releases/latest/download/Gotlancer-Mac-x64.zip
+
+      - name: Extract and Prepare ARM64
+        run: |
+          unzip arm64.zip -d arm64
+
+          APP_PATH=$(find arm64 -type d -name "*.app" | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ ARM64: No .app found"
+            exit 1
+          fi
+
+          echo "✅ Found ARM64 app at: $APP_PATH"
+
+          mkdir dmg-arm64
+          cp -R "$APP_PATH" dmg-arm64/
+          ln -s /Applications dmg-arm64/Applications
+
+          hdiutil create -volname "Gotlancer (Apple Silicon)" \
+            -srcfolder dmg-arm64 \
+            -ov -format UDZO Gotlancer-AppleSilicon.dmg
+
+      - name: Extract and Prepare Intel
+        run: |
+          unzip x64.zip -d x64
+
+          APP_PATH=$(find x64 -type d -name "*.app" | head -n 1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Intel: No .app found"
+            exit 1
+          fi
+
+          echo "✅ Found Intel app at: $APP_PATH"
+
+          mkdir dmg-x64
+          cp -R "$APP_PATH" dmg-x64/
+          ln -s /Applications dmg-x64/Applications
+
+          hdiutil create -volname "Gotlancer (Intel)" \
+            -srcfolder dmg-x64 \
+            -ov -format UDZO Gotlancer-Intel.dmg
+
+      - name: Upload DMGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: gotlancer-dmgs
+          path: |
+            Gotlancer-AppleSilicon.dmg
+            Gotlancer-Intel.dmg
